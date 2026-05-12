@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0f19" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="GPS Race Timer" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<title>GPS Race Timer</title>
+<style>
+  :root {
+    --bg: #0b0f19;
+    --panel: #131a2b;
+    --panel-2: #1a2238;
+    --line: #243049;
+    --text: #e8eefc;
+    --muted: #8b97b3;
+    --accent: #ffcc00;
+    --accent-2: #ff7a00;
+    --ok: #18d27a;
+    --warn: #ffb020;
+    --bad: #ff4d4f;
+    --blue: #4ea1ff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "Noto Sans Thai", sans-serif;
+    overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display: flex; flex-direction: column;
+  }
+  header {
+    padding: 12px 16px 4px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  header h1 {
+    font-size: 16px; margin: 0; letter-spacing: .5px;
+    color: var(--muted); font-weight: 600;
+  }
+  .gps-dot {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--muted);
+  }
+  .gps-dot::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--bad); box-shadow: 0 0 6px var(--bad);
+  }
+  .gps-dot.ok::before { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .gps-dot.warn::before { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+
+  main { flex: 1; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  .speedo {
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 18px 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    position: relative;
+  }
+  .speedo .label { font-size: 12px; color: var(--muted); letter-spacing: 2px; }
+  .speedo .value {
+    font-size: 92px; font-weight: 800; line-height: 1; letter-spacing: -3px;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    text-shadow: 0 0 24px rgba(255, 204, 0, .25);
+  }
+  .speedo .unit { font-size: 16px; color: var(--muted); margin-top: -2px; }
+  .speedo .peak {
+    position: absolute; top: 12px; right: 14px;
+    font-size: 11px; color: var(--muted);
+  }
+  .speedo .peak b { color: var(--text); }
+
+  .row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+  }
+  .card .k { font-size: 11px; color: var(--muted); letter-spacing: 1.5px; }
+  .card .v {
+    font-size: 28px; font-weight: 700; margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .card .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .timer-card {
+    background: linear-gradient(180deg, #181f33 0%, #11172a 100%);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 16px;
+    text-align: center;
+  }
+  .timer-card .state {
+    display: inline-block;
+    font-size: 11px; letter-spacing: 2px;
+    padding: 3px 10px; border-radius: 999px;
+    background: #2a3454; color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .timer-card .state.armed { background: #4a3a00; color: var(--accent); }
+  .timer-card .state.running { background: #00441f; color: var(--ok); }
+  .timer-card .state.finished { background: #002b4a; color: var(--blue); }
+  .timer-card .time {
+    font-size: 64px; font-weight: 800; line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -2px;
+  }
+  .timer-card .time .ms { font-size: 32px; color: var(--muted); }
+
+  .controls {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: end;
+  }
+  label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 6px; letter-spacing: 1px; }
+  input[type="number"] {
+    width: 100%;
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 18px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .quick {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+  }
+  .quick button {
+    background: #1a2238; color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .quick button.active { background: var(--accent); color: #1a1300; border-color: var(--accent); font-weight: 700; }
+
+  .btn {
+    border: none; border-radius: 14px; padding: 14px;
+    font-size: 15px; font-weight: 700; letter-spacing: 1px;
+    cursor: pointer;
+    transition: transform .05s ease, opacity .15s ease;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: #1a1300; }
+  .btn-stop    { background: var(--bad); color: #fff; }
+  .btn-ghost   { background: #1a2238; color: var(--text); border: 1px solid var(--line); }
+
+  .actions { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+  .actions.single { grid-template-columns: 1fr; }
+
+  details.history {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 12px 14px;
+  }
+  details.history summary {
+    cursor: pointer; font-size: 13px; color: var(--muted);
+    letter-spacing: 1px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  details.history summary::-webkit-details-marker { display: none; }
+  details.history summary .count {
+    background: #2a3454; color: var(--text); border-radius: 999px;
+    padding: 2px 8px; font-size: 11px;
+  }
+  .hist-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+  .hist-item {
+    display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center;
+    background: var(--panel-2); border-radius: 10px; padding: 8px 10px;
+    font-size: 13px;
+  }
+  .hist-item.best { background: linear-gradient(90deg, rgba(255,204,0,.18), rgba(255,122,0,.10)); border: 1px solid rgba(255,204,0,.35); }
+  .hist-item .t { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .hist-item .d { color: var(--muted); }
+  .hist-item .s { color: var(--muted); font-size: 11px; }
+  .hist-item .del { background: transparent; color: var(--bad); border: none; font-size: 14px; cursor: pointer; padding: 4px 6px; }
+
+  .toast {
+    position: fixed; bottom: calc(20px + env(safe-area-inset-bottom));
+    left: 50%; transform: translateX(-50%);
+    background: #1a2238; border: 1px solid var(--line);
+    color: var(--text); padding: 10px 16px; border-radius: 12px;
+    font-size: 13px; opacity: 0; transition: opacity .2s ease;
+    pointer-events: none; z-index: 50; max-width: 90vw; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+
+  .hint { font-size: 11px; color: var(--muted); text-align: center; }
+
+  footer { padding: 10px 16px 14px; font-size: 10px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>GPS RACE TIMER</h1>
+  <span id="gpsStatus" class="gps-dot">รอ GPS…</span>
+</header>
+
+<main>
+  <!-- Speedometer -->
+  <div class="speedo">
+    <div class="peak">PEAK <b id="peakSpeed">0</b> km/h</div>
+    <div class="label">SPEED</div>
+    <div class="value" id="speed">0</div>
+    <div class="unit">km/h</div>
+  </div>
+
+  <!-- Timer + distance -->
+  <div class="timer-card">
+    <div class="state" id="state">IDLE</div>
+    <div class="time" id="time">0.000<span class="ms"></span></div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <div class="k">ระยะที่วิ่งไป</div>
+      <div class="v"><span id="dist">0.0</span> <span style="font-size:14px;color:var(--muted)">m</span></div>
+      <div class="sub">เป้าหมาย: <span id="targetEcho">—</span> m</div>
+    </div>
+    <div class="card">
+      <div class="k">GPS ACCURACY</div>
+      <div class="v"><span id="acc">—</span> <span style="font-size:14px;color:var(--muted)">m</span></div>
+      <div class="sub" id="accHint">รอสัญญาณ…</div>
+    </div>
+  </div>
+
+  <!-- Distance picker -->
+  <div>
+    <label for="target">ระยะทางเป้าหมาย (เมตร)</label>
+    <div class="controls">
+      <input id="target" type="number" inputmode="numeric" min="10" step="10" value="402" />
+      <button class="btn btn-ghost" id="minus10">−10</button>
+      <button class="btn btn-ghost" id="plus10">+10</button>
+    </div>
+    <div class="quick" id="quickPicks">
+      <button data-d="50">50</button>
+      <button data-d="100">100</button>
+      <button data-d="201">201 (⅛ ml)</button>
+      <button data-d="402" class="active">402 (¼ ml)</button>
+      <button data-d="1000">1000</button>
+      <button data-d="1609">1609 (1 ml)</button>
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="actions" id="actions">
+    <button class="btn btn-primary" id="armBtn">ARM (เตรียมพร้อม)</button>
+    <button class="btn btn-ghost" id="resetBtn">RESET</button>
+  </div>
+  <div class="hint" id="hint">กด ARM แล้วเคลื่อนรถ — เวลาจะเริ่มจับอัตโนมัติเมื่อรถเริ่มขยับ</div>
+
+  <!-- History -->
+  <details class="history" id="histBox">
+    <summary>
+      <span>ประวัติการวิ่ง</span>
+      <span class="count" id="histCount">0</span>
+    </summary>
+    <div class="hist-list" id="histList"></div>
+    <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+      <button class="btn btn-ghost" id="clearHist" style="font-size:11px; padding:6px 10px;">ลบประวัติทั้งหมด</button>
+    </div>
+  </details>
+</main>
+
+<footer>
+  ใช้งาน HTTPS เท่านั้น • เปิดให้แอปเข้าถึงตำแหน่ง “ตลอดเวลา” เพื่อความแม่นยำ
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+// ====== CONFIG ======
+const MOVE_THRESHOLD_KMH = 1.0;        // ความเร็วขั้นต่ำที่ถือว่าเริ่มขยับ (km/h)
+const ACC_GOOD = 8;                    // ม. - ดี
+const ACC_OK   = 20;                   // ม. - พอใช้
+const HISTORY_KEY = "gps_race_timer_history_v1";
+
+// ====== STATE ======
+let watchId = null;
+let state = "idle";   // idle | armed | running | finished
+let lastPos = null;   // {lat, lon, t, speed (m/s, may be null)}
+let startTime = 0;    // ms (timestamp from GPS at "running" trigger)
+let endTime = 0;
+let distanceM = 0;
+let targetM = 402;
+let peakKmh = 0;
+let history = [];
+let wakeLock = null;
+
+// ====== HELPERS ======
+const $ = (id) => document.getElementById(id);
+const speedEl = $("speed");
+const peakEl = $("peakSpeed");
+const timeEl = $("time");
+const stateEl = $("state");
+const distEl = $("dist");
+const accEl = $("acc");
+const accHintEl = $("accHint");
+const gpsStatusEl = $("gpsStatus");
+const armBtn = $("armBtn");
+const resetBtn = $("resetBtn");
+const targetInput = $("target");
+const targetEcho = $("targetEcho");
+const hintEl = $("hint");
+const histListEl = $("histList");
+const histCountEl = $("histCount");
+const toastEl = $("toast");
+
+function fmtTime(ms) {
+  if (ms < 0) ms = 0;
+  const totalSec = ms / 1000;
+  const minutes = Math.floor(totalSec / 60);
+  const sec = totalSec - minutes * 60;
+  if (minutes > 0) {
+    return minutes + ":" + sec.toFixed(3).padStart(6, "0");
+  }
+  return sec.toFixed(3);
+}
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (d) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+function toast(msg, ms=1800) {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toastEl.classList.remove("show"), ms);
+}
+
+// ====== WAKE LOCK (กันจอดับ) ======
+async function requestWakeLock() {
+  try {
+    if ("wakeLock" in navigator) {
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => { wakeLock = null; });
+    }
+  } catch (e) { /* ignore */ }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && state !== "idle") requestWakeLock();
+});
+
+// ====== HISTORY ======
+function loadHistory() {
+  try { history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); }
+  catch (e) { history = []; }
+  renderHistory();
+}
+function saveHistory() {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch (e) {}
+}
+function renderHistory() {
+  histCountEl.textContent = history.length;
+  histListEl.innerHTML = "";
+  // หา best time ของแต่ละระยะ
+  const bestByDist = {};
+  history.forEach((r) => {
+    if (bestByDist[r.target] == null || r.time < bestByDist[r.target]) bestByDist[r.target] = r.time;
+  });
+  history.slice().reverse().forEach((r) => {
+    const isBest = r.time === bestByDist[r.target];
+    const d = new Date(r.at);
+    const dStr = d.toLocaleDateString("th-TH", { day: "2-digit", month: "2-digit" }) + " " +
+                 d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+    const row = document.createElement("div");
+    row.className = "hist-item" + (isBest ? " best" : "");
+    row.innerHTML =
+      '<div class="t">' + fmtTime(r.time) + 's</div>' +
+      '<div class="d">' + r.target + ' m</div>' +
+      '<div class="s">peak ' + r.peak.toFixed(1) + ' / ' + dStr + '</div>' +
+      '<button class="del" title="ลบ">✕</button>';
+    row.querySelector(".del").addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      history = history.filter((x) => x.id !== r.id);
+      saveHistory();
+      renderHistory();
+    });
+    histListEl.appendChild(row);
+  });
+}
+$("clearHist").addEventListener("click", () => {
+  if (history.length && confirm("ลบประวัติทั้งหมด?")) {
+    history = []; saveHistory(); renderHistory();
+  }
+});
+
+// ====== GPS ======
+function startWatch() {
+  if (!("geolocation" in navigator)) {
+    gpsStatusEl.textContent = "ไม่รองรับ GPS";
+    toast("เบราว์เซอร์ไม่รองรับ GPS");
+    return;
+  }
+  if (watchId != null) return;
+  watchId = navigator.geolocation.watchPosition(onPos, onErr, {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 10000,
+  });
+}
+function onErr(err) {
+  gpsStatusEl.classList.remove("ok", "warn");
+  gpsStatusEl.textContent = "GPS error: " + (err.message || err.code);
+  toast("GPS ผิดพลาด: " + (err.message || err.code), 3000);
+}
+
+function onPos(pos) {
+  const c = pos.coords;
+  const t = pos.timestamp; // ms
+  const acc = c.accuracy;
+  // ความเร็ว: ใช้จาก GPS ถ้ามี (m/s) ไม่งั้นคำนวณจากระยะ/เวลา
+  let speedMs = (c.speed != null && !isNaN(c.speed) && c.speed >= 0) ? c.speed : null;
+  if (speedMs == null && lastPos) {
+    const d = haversine(lastPos.lat, lastPos.lon, c.latitude, c.longitude);
+    const dt = (t - lastPos.t) / 1000;
+    if (dt > 0) speedMs = d / dt;
+  }
+  if (speedMs == null) speedMs = 0;
+  const kmh = speedMs * 3.6;
+
+  // ====== Update GPS status ======
+  accEl.textContent = acc != null ? acc.toFixed(1) : "—";
+  if (acc != null) {
+    if (acc <= ACC_GOOD) {
+      gpsStatusEl.className = "gps-dot ok";
+      gpsStatusEl.textContent = "GPS ดี";
+      accHintEl.textContent = "ความแม่นยำดี";
+    } else if (acc <= ACC_OK) {
+      gpsStatusEl.className = "gps-dot warn";
+      gpsStatusEl.textContent = "GPS ปานกลาง";
+      accHintEl.textContent = "พอใช้ ลองไปที่โล่ง";
+    } else {
+      gpsStatusEl.className = "gps-dot";
+      gpsStatusEl.textContent = "GPS อ่อน";
+      accHintEl.textContent = "สัญญาณอ่อน รอ/หาที่โล่ง";
+    }
+  }
+
+  // ====== Show speed ======
+  speedEl.textContent = kmh.toFixed(1);
+  if (kmh > peakKmh && (state === "running" || state === "armed")) {
+    peakKmh = kmh;
+    peakEl.textContent = peakKmh.toFixed(1);
+  }
+
+  // ====== State machine ======
+  if (state === "armed") {
+    if (kmh >= MOVE_THRESHOLD_KMH) {
+      // เริ่มจับเวลา — ใช้ timestamp ของ GPS เป็นจุดเริ่ม
+      state = "running";
+      startTime = t;
+      distanceM = 0;
+      peakKmh = kmh;
+      peakEl.textContent = peakKmh.toFixed(1);
+      stateEl.textContent = "RUNNING";
+      stateEl.className = "state running";
+      hintEl.textContent = "กำลังจับเวลา… เวลาจะหยุดอัตโนมัติเมื่อถึงระยะ " + targetM + " m";
+      toast("เริ่มจับเวลา!");
+    }
+  } else if (state === "running" && lastPos) {
+    const seg = haversine(lastPos.lat, lastPos.lon, c.latitude, c.longitude);
+    const newDist = distanceM + seg;
+    if (newDist >= targetM) {
+      // Interpolate เวลาที่ระยะถึงเป้า
+      const frac = (targetM - distanceM) / seg;
+      const tCross = lastPos.t + frac * (t - lastPos.t);
+      endTime = tCross;
+      distanceM = targetM;
+      const elapsed = endTime - startTime;
+      timeEl.innerHTML = fmtTime(elapsed) + '<span class="ms"></span>';
+      distEl.textContent = targetM.toFixed(1);
+      state = "finished";
+      stateEl.textContent = "FINISHED";
+      stateEl.className = "state finished";
+      hintEl.textContent = "เสร็จสิ้น! กด RESET เพื่อวิ่งใหม่";
+      // บันทึก
+      const rec = {
+        id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+        at: Date.now(),
+        target: targetM,
+        time: elapsed,
+        peak: peakKmh,
+      };
+      history.push(rec);
+      saveHistory();
+      renderHistory();
+      // หา best
+      const sameDist = history.filter((x) => x.target === targetM);
+      const best = Math.min(...sameDist.map((x) => x.time));
+      if (elapsed === best && sameDist.length > 1) toast("🏁 BEST TIME!", 2500);
+      else toast("เสร็จ: " + fmtTime(elapsed) + "s");
+      armBtn.textContent = "ARM (เตรียมพร้อม)";
+      if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock = null; }
+    } else {
+      distanceM = newDist;
+      distEl.textContent = distanceM.toFixed(1);
+      // อัปเดตเวลาแบบ live
+      const elapsed = t - startTime;
+      timeEl.innerHTML = fmtTime(elapsed) + '<span class="ms"></span>';
+    }
+  }
+
+  lastPos = { lat: c.latitude, lon: c.longitude, t: t, speed: speedMs };
+}
+
+// ====== UI HANDLERS ======
+function updateTargetEcho() { targetEcho.textContent = targetM; }
+
+function setTarget(v) {
+  v = Math.max(10, Math.floor(v));
+  targetM = v;
+  targetInput.value = v;
+  updateTargetEcho();
+  // เน้นปุ่ม quick ที่ตรงกัน
+  document.querySelectorAll("#quickPicks button").forEach((b) => {
+    b.classList.toggle("active", Number(b.dataset.d) === v);
+  });
+}
+
+targetInput.addEventListener("change", () => setTarget(Number(targetInput.value) || 10));
+targetInput.addEventListener("input", () => {
+  document.querySelectorAll("#quickPicks button").forEach((b) => {
+    b.classList.toggle("active", Number(b.dataset.d) === Number(targetInput.value));
+  });
+});
+$("plus10").addEventListener("click", () => setTarget((Number(targetInput.value) || 0) + 10));
+$("minus10").addEventListener("click", () => setTarget((Number(targetInput.value) || 0) - 10));
+document.querySelectorAll("#quickPicks button").forEach((b) => {
+  b.addEventListener("click", () => setTarget(Number(b.dataset.d)));
+});
+
+armBtn.addEventListener("click", async () => {
+  if (state === "idle" || state === "finished") {
+    // arm
+    const v = Number(targetInput.value);
+    if (!v || v < 10) { toast("ระยะอย่างน้อย 10 เมตร"); return; }
+    targetM = Math.floor(v);
+    updateTargetEcho();
+    state = "armed";
+    distanceM = 0; peakKmh = 0; startTime = 0; endTime = 0;
+    distEl.textContent = "0.0";
+    peakEl.textContent = "0";
+    timeEl.innerHTML = '0.000<span class="ms"></span>';
+    stateEl.textContent = "ARMED — รอรถขยับ";
+    stateEl.className = "state armed";
+    hintEl.textContent = "พร้อมแล้ว — เคลื่อนรถเพื่อเริ่ม (≥ " + MOVE_THRESHOLD_KMH + " km/h)";
+    armBtn.textContent = "CANCEL";
+    requestWakeLock();
+    startWatch();
+  } else if (state === "armed" || state === "running") {
+    resetAll();
+  }
+});
+
+resetBtn.addEventListener("click", () => resetAll());
+
+function resetAll() {
+  state = "idle";
+  distanceM = 0; peakKmh = 0; startTime = 0; endTime = 0;
+  distEl.textContent = "0.0";
+  peakEl.textContent = "0";
+  timeEl.innerHTML = '0.000<span class="ms"></span>';
+  stateEl.textContent = "IDLE";
+  stateEl.className = "state";
+  hintEl.textContent = "กด ARM แล้วเคลื่อนรถ — เวลาจะเริ่มจับอัตโนมัติเมื่อรถเริ่มขยับ";
+  armBtn.textContent = "ARM (เตรียมพร้อม)";
+  if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock = null; }
+}
+
+// ====== INIT ======
+setTarget(targetM);
+loadHistory();
+startWatch(); // ขอ permission ตั้งแต่เปิดแอป เพื่อให้พร้อมใช้
+
+// Service worker
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
+
