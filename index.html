@@ -212,7 +212,19 @@
 
   .hint { font-size: 11px; color: var(--muted); text-align: center; }
 
-  footer { padding: 10px 16px 14px; font-size: 10px; color: var(--muted); text-align: center; }
+  footer { padding: 10px 16px 14px; font-size: 10px; color: var(--muted); text-align: center; line-height: 1.6; }
+  footer .credit {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(255,204,0,.15), rgba(255,122,0,.10));
+    border: 1px solid rgba(255,204,0,.25);
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 1px;
+    font-size: 10px;
+  }
 </style>
 </head>
 <body>
@@ -288,7 +300,8 @@
 </main>
 
 <footer>
-  ใช้งาน HTTPS เท่านั้น • เปิดให้แอปเข้าถึงตำแหน่ง “ตลอดเวลา” เพื่อความแม่นยำ
+  ใช้งาน HTTPS เท่านั้น • เปิดให้แอปเข้าถึงตำแหน่ง “ตลอดเวลา” เพื่อความแม่นยำ<br>
+  <span class="credit">CREATED BY SURASEK</span>
 </footer>
 
 <div class="toast" id="toast"></div>
@@ -612,4 +625,3 @@ if ("serviceWorker" in navigator) {
 </script>
 </body>
 </html>
-
