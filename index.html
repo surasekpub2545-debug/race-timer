@@ -212,6 +212,70 @@
 
   .hint { font-size: 11px; color: var(--muted); text-align: center; }
 
+  /* ===== Time Slip ===== */
+  .timeslip {
+    background:
+      repeating-linear-gradient(
+        0deg,
+        #0a0d16 0px, #0a0d16 26px,
+        #0e1220 26px, #0e1220 27px
+      );
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 18px 18px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    position: relative;
+    overflow: hidden;
+  }
+  .timeslip[hidden] { display: none; }
+  .timeslip::before {
+    content: "";
+    position: absolute; left: 0; right: 0; top: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-2), var(--accent), var(--accent-2));
+  }
+  .timeslip .ts-head {
+    text-align: center;
+    letter-spacing: 6px;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 800;
+    margin: 4px 0 2px;
+  }
+  .timeslip .ts-sub {
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  .timeslip .ts-section {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin: 10px 0 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .timeslip .ts-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 4px 0;
+    font-size: 13px;
+    border-bottom: 1px dashed rgba(139,151,179,.15);
+  }
+  .timeslip .ts-row:last-child { border-bottom: none; }
+  .timeslip .ts-row .lbl { color: var(--muted); }
+  .timeslip .ts-row .val {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+  .timeslip .ts-row .val .u { color: var(--muted); font-weight: 400; font-size: 11px; margin-left: 3px; }
+  .timeslip .ts-row.empty .val { color: #3a4258; font-weight: 400; }
+  .timeslip .ts-row.final { background: rgba(255,204,0,.08); border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+  .timeslip .ts-row.final .lbl { color: var(--accent); font-weight: 700; }
+  .timeslip .ts-row.final .val { color: var(--accent); font-size: 16px; }
+
   footer { padding: 10px 16px 14px; font-size: 10px; color: var(--muted); text-align: center; line-height: 1.6; }
   footer .credit {
     display: inline-block;
@@ -279,6 +343,30 @@
     </div>
   </div>
 
+  <!-- Time Slip -->
+  <div class="timeslip" id="timeslip" hidden>
+    <div class="ts-head">TIME SLIP</div>
+    <div class="ts-sub" id="tsSub">—</div>
+
+    <div class="ts-section">SPLITS</div>
+    <div class="ts-row" data-split="18.288"><span class="lbl">60 ft</span><span class="val">—</span></div>
+    <div class="ts-row" data-split="100.584"><span class="lbl">330 ft</span><span class="val">—</span></div>
+    <div class="ts-row" data-split="201.168"><span class="lbl">1/8 mile</span><span class="val">—</span></div>
+    <div class="ts-row" data-split="304.8"><span class="lbl">1000 ft</span><span class="val">—</span></div>
+    <div class="ts-row" data-split="402.336"><span class="lbl">1/4 mile</span><span class="val">—</span></div>
+
+    <div class="ts-section">0 → SPEED</div>
+    <div class="ts-row" data-kmh="60"><span class="lbl">0 – 60 km/h</span><span class="val">—</span></div>
+    <div class="ts-row" data-kmh="100"><span class="lbl">0 – 100 km/h</span><span class="val">—</span></div>
+    <div class="ts-row" data-kmh="160"><span class="lbl">0 – 160 km/h</span><span class="val">—</span></div>
+    <div class="ts-row" data-kmh="200"><span class="lbl">0 – 200 km/h</span><span class="val">—</span></div>
+
+    <div class="ts-section">RESULT</div>
+    <div class="ts-row"><span class="lbl">Trap Speed</span><span class="val" id="tsTrap">—</span></div>
+    <div class="ts-row"><span class="lbl">Peak Speed</span><span class="val" id="tsPeak">—</span></div>
+    <div class="ts-row final"><span class="lbl" id="tsTargetLbl">TARGET</span><span class="val" id="tsFinal">—</span></div>
+  </div>
+
   <!-- Action buttons -->
   <div class="actions" id="actions">
     <button class="btn btn-primary" id="armBtn">ARM (เตรียมพร้อม)</button>
@@ -314,6 +402,15 @@ const MOVE_THRESHOLD_KMH = 1.0;        // ความเร็วขั้น�
 const ACC_GOOD = 8;                    // ม. - ดี
 const ACC_OK   = 20;                   // ม. - พอใช้
 const HISTORY_KEY = "gps_race_timer_history_v1";
+// Drag-racing splits (เมตร — แม่นยำตามมาตรฐาน NHRA)
+const SPLITS = [
+  { m: 18.288,  label: "60 ft" },
+  { m: 100.584, label: "330 ft" },
+  { m: 201.168, label: "1/8 mile" },
+  { m: 304.8,   label: "1000 ft" },
+  { m: 402.336, label: "1/4 mile" },
+];
+const KMH_MILESTONES = [60, 100, 160, 200];
 
 // ====== STATE ======
 let watchId = null;
@@ -324,6 +421,10 @@ let endTime = 0;
 let distanceM = 0;
 let targetM = 402;
 let peakKmh = 0;
+let lastKmh = 0;      // kmh ของ frame ก่อนหน้า — ใช้ interpolate milestone
+let trapKmh = 0;      // ความเร็วตอนข้ามเส้นชัย (interpolated)
+let splitTimes = {};  // { "18.288": elapsedMs, ... }
+let kmhTimes = {};    // { "60": elapsedMs, ... }
 let history = [];
 let wakeLock = null;
 
@@ -345,6 +446,12 @@ const hintEl = $("hint");
 const histListEl = $("histList");
 const histCountEl = $("histCount");
 const toastEl = $("toast");
+const timeslipEl = $("timeslip");
+const tsSubEl = $("tsSub");
+const tsTrapEl = $("tsTrap");
+const tsPeakEl = $("tsPeak");
+const tsFinalEl = $("tsFinal");
+const tsTargetLblEl = $("tsTargetLbl");
 
 function fmtTime(ms) {
   if (ms < 0) ms = 0;
@@ -419,6 +526,11 @@ function renderHistory() {
       saveHistory();
       renderHistory();
     });
+    row.style.cursor = "pointer";
+    row.addEventListener("click", () => {
+      renderTimeslip(r);
+      timeslipEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
     histListEl.appendChild(row);
   });
 }
@@ -427,6 +539,52 @@ $("clearHist").addEventListener("click", () => {
     history = []; saveHistory(); renderHistory();
   }
 });
+
+// ====== TIME SLIP ======
+function renderTimeslip(rec) {
+  // หัว slip: วัน-เวลา + ระยะ
+  const d = new Date(rec.at);
+  const stamp = d.toLocaleDateString("th-TH", { day: "2-digit", month: "2-digit", year: "2-digit" }) + " " +
+                d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  tsSubEl.textContent = stamp + " • TARGET " + rec.target + " m";
+
+  // Splits
+  document.querySelectorAll("#timeslip .ts-row[data-split]").forEach((row) => {
+    const key = row.dataset.split;
+    const splitDist = Number(key);
+    const valEl = row.querySelector(".val");
+    if (rec.splits && rec.splits[key] != null) {
+      valEl.innerHTML = (rec.splits[key] / 1000).toFixed(3) + '<span class="u">s</span>';
+      row.classList.remove("empty");
+    } else {
+      // ถ้าระยะ split เกิน target หรือไม่ได้ข้าม ให้แสดง dash
+      valEl.innerHTML = (splitDist > rec.target ? "n/a" : "—");
+      row.classList.add("empty");
+    }
+  });
+
+  // 0 → speed
+  document.querySelectorAll("#timeslip .ts-row[data-kmh]").forEach((row) => {
+    const key = row.dataset.kmh;
+    const valEl = row.querySelector(".val");
+    if (rec.kmh && rec.kmh[key] != null) {
+      valEl.innerHTML = (rec.kmh[key] / 1000).toFixed(3) + '<span class="u">s</span>';
+      row.classList.remove("empty");
+    } else {
+      valEl.innerHTML = "—";
+      row.classList.add("empty");
+    }
+  });
+
+  // Trap / Peak / Final
+  tsTrapEl.innerHTML = (rec.trap != null ? rec.trap.toFixed(1) : "—") + '<span class="u">km/h</span>';
+  tsPeakEl.innerHTML = (rec.peak != null ? rec.peak.toFixed(1) : "—") + '<span class="u">km/h</span>';
+  tsTargetLblEl.textContent = rec.target + " M";
+  tsFinalEl.innerHTML = fmtTime(rec.time) + '<span class="u">s</span>';
+
+  timeslipEl.hidden = false;
+}
+function hideTimeslip() { timeslipEl.hidden = true; }
 
 // ====== GPS ======
 function startWatch() {
@@ -495,6 +653,10 @@ function onPos(pos) {
       startTime = t;
       distanceM = 0;
       peakKmh = kmh;
+      lastKmh = kmh;
+      splitTimes = {};
+      kmhTimes = {};
+      trapKmh = 0;
       peakEl.textContent = peakKmh.toFixed(1);
       stateEl.textContent = "RUNNING";
       stateEl.className = "state running";
@@ -504,12 +666,39 @@ function onPos(pos) {
   } else if (state === "running" && lastPos) {
     const seg = haversine(lastPos.lat, lastPos.lon, c.latitude, c.longitude);
     const newDist = distanceM + seg;
+    const dtFrame = t - lastPos.t;
+
+    // ===== ตรวจ split distances ที่ข้ามใน frame นี้ =====
+    for (const sp of SPLITS) {
+      const key = String(sp.m);
+      if (splitTimes[key] != null) continue;          // ข้ามไปแล้ว
+      if (sp.m > targetM) continue;                   // เกินเป้าหมาย ไม่นับ
+      if (distanceM < sp.m && newDist >= sp.m && seg > 0) {
+        const frac = (sp.m - distanceM) / seg;
+        const tCross = lastPos.t + frac * dtFrame;
+        splitTimes[key] = tCross - startTime;        // elapsed ms
+      }
+    }
+
+    // ===== ตรวจ km/h milestones =====
+    for (const ms of KMH_MILESTONES) {
+      const key = String(ms);
+      if (kmhTimes[key] != null) continue;
+      if (lastKmh < ms && kmh >= ms && (kmh - lastKmh) > 0) {
+        const frac = (ms - lastKmh) / (kmh - lastKmh);
+        const tCross = lastPos.t + frac * dtFrame;
+        kmhTimes[key] = tCross - startTime;
+      }
+    }
+
     if (newDist >= targetM) {
       // Interpolate เวลาที่ระยะถึงเป้า
-      const frac = (targetM - distanceM) / seg;
-      const tCross = lastPos.t + frac * (t - lastPos.t);
+      const frac = seg > 0 ? (targetM - distanceM) / seg : 0;
+      const tCross = lastPos.t + frac * dtFrame;
       endTime = tCross;
       distanceM = targetM;
+      // Trap speed = interpolate ความเร็ว ณ จุดข้ามเส้น
+      trapKmh = lastKmh + frac * (kmh - lastKmh);
       const elapsed = endTime - startTime;
       timeEl.innerHTML = fmtTime(elapsed) + '<span class="ms"></span>';
       distEl.textContent = targetM.toFixed(1);
@@ -524,10 +713,14 @@ function onPos(pos) {
         target: targetM,
         time: elapsed,
         peak: peakKmh,
+        trap: trapKmh,
+        splits: { ...splitTimes },
+        kmh: { ...kmhTimes },
       };
       history.push(rec);
       saveHistory();
       renderHistory();
+      renderTimeslip(rec);
       // หา best
       const sameDist = history.filter((x) => x.target === targetM);
       const best = Math.min(...sameDist.map((x) => x.time));
@@ -542,6 +735,7 @@ function onPos(pos) {
       const elapsed = t - startTime;
       timeEl.innerHTML = fmtTime(elapsed) + '<span class="ms"></span>';
     }
+    lastKmh = kmh;
   }
 
   lastPos = { lat: c.latitude, lon: c.longitude, t: t, speed: speedMs };
@@ -601,6 +795,8 @@ resetBtn.addEventListener("click", () => resetAll());
 function resetAll() {
   state = "idle";
   distanceM = 0; peakKmh = 0; startTime = 0; endTime = 0;
+  lastKmh = 0; trapKmh = 0;
+  splitTimes = {}; kmhTimes = {};
   distEl.textContent = "0.0";
   peakEl.textContent = "0";
   timeEl.innerHTML = '0.000<span class="ms"></span>';
@@ -608,6 +804,7 @@ function resetAll() {
   stateEl.className = "state";
   hintEl.textContent = "กด ARM แล้วเคลื่อนรถ — เวลาจะเริ่มจับอัตโนมัติเมื่อรถเริ่มขยับ";
   armBtn.textContent = "ARM (เตรียมพร้อม)";
+  hideTimeslip();
   if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock = null; }
 }
 
