@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2238"/>
+      <stop offset="100%" stop-color="#0b0f19"/>
+    </linearGradient>
+    <linearGradient id="needle" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ff7a00"/>
+      <stop offset="100%" stop-color="#ffcc00"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <g transform="translate(256,300)">
+    <path d="M -170 0 A 170 170 0 0 1 170 0" stroke="#243049" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M -170 0 A 170 170 0 0 1 95 -140" stroke="url(#needle)" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <g transform="rotate(-30)">
+      <line x1="0" y1="0" x2="0" y2="-150" stroke="#ffcc00" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="0" cy="0" r="18" fill="#ffcc00"/>
+      <circle cx="0" cy="0" r="8" fill="#1a1300"/>
+    </g>
+  </g>
+  <text x="256" y="430" text-anchor="middle" fill="#e8eefc" font-family="Arial, sans-serif" font-weight="800" font-size="48" letter-spacing="2">GPS</text>
+  <text x="256" y="475" text-anchor="middle" fill="#ffcc00" font-family="Arial, sans-serif" font-weight="700" font-size="28" letter-spacing="6">TIMER</text>
+</svg>
+
