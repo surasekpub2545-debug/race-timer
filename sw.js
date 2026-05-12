@@ -1,5 +1,5 @@
 // GPS Race Timer - Service Worker
-const CACHE = "gps-race-timer-v2";
+const CACHE = "gps-race-timer-v3";
 const ASSETS = [
   "./",
   "./index.html",
