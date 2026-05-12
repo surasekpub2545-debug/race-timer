@@ -1,0 +1,21 @@
+{
+  "name": "GPS Race Timer",
+  "short_name": "Race Timer",
+  "description": "จับเวลารถแข่งด้วย GPS — เริ่มอัตโนมัติเมื่อรถขยับ ตัดเวลาเมื่อถึงระยะที่กำหนด",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0f19",
+  "theme_color": "#0b0f19",
+  "lang": "th",
+  "categories": ["sports", "utilities"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
